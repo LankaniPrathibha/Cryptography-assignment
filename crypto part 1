@@ -1,0 +1,79 @@
+# Part 1: Basic Block Cipher Implementation
+
+# 1. Define Block and Key Sizes
+BLOCK_SIZE = 8  # 8 bits
+KEY_SIZE = 8    # 8 bits
+
+# 2. Implement a Simple Substitution Box (S-box) in binary format
+S_BOX = [
+    [0b1110, 0b0100, 0b1101, 0b0001],  # 0xE, 0x4, 0xD, 0x1
+    [0b0000, 0b1010, 0b0110, 0b1100],  # 0x0, 0xA, 0x6, 0xC
+    [0b0101, 0b1001, 0b0011, 0b0111],  # 0x5, 0x9, 0x3, 0x7
+    [0b1011, 0b0010, 0b1111, 0b1000]   # 0xB, 0x2, 0xF, 0x8
+]
+
+def substitute(nibble):
+    row = (nibble >> 2) & 0x03  # Get the first 2 bits
+    col = nibble & 0x03         # Get the last 2 bits
+    return S_BOX[row][col]
+
+# 3. Implement a Simplified Permutation
+PERMUTATION_TABLE = [1, 5, 2, 6, 3, 7, 4, 0]  # 0-indexed
+
+def permute(block):
+    permuted = 0
+    for i in range(BLOCK_SIZE):
+        permuted |= ((block >> i) & 0x01) << PERMUTATION_TABLE[i]
+    return permuted
+
+# 4. Implement a Basic Feistel Function
+def feistel_function(right_half, key):
+    return right_half ^ key  # Simple XOR operation
+
+# 5. Combine Components for Encryption
+def encrypt(block, key):
+    # Split the block into two halves
+    left_half = (block >> 4) & 0x0F  # First 4 bits
+    right_half = block & 0x0F        # Last 4 bits
+
+    # Apply the Feistel function
+    transformed_right = feistel_function(right_half, key)
+
+    # Substitute the result
+    substituted = substitute(transformed_right)
+
+    # Combine with left half
+    new_left = right_half
+    new_right = substituted
+
+    # Combine halves and permute the result
+    combined_block = (new_left << 4) | new_right
+    return permute(combined_block)
+
+# Main function to get plaintext and generate ciphertext
+if __name__ == "__main__":
+    try:
+        # Ask for plaintext input in binary format
+        plaintext = input("Enter an 8-bit plaintext (in binary, e.g., 0b1010): ")
+        
+        # Ensure the input is valid
+        if not plaintext.startswith("0b"):
+            raise ValueError("Input must be in the format 0bXXXXXXXX where X is 0 or 1.")
+        
+        block = int(plaintext, 2)  # Convert binary input to integer
+
+        # Check if the block size is 8 bits
+        if block < 0 or block > 0xFF:
+            raise ValueError("Input must be an 8-bit value (0b00000000 to 0b11111111).")
+
+        # Assign a key value for encryption (8 bits)
+        key = 0b0011  # Example key value in binary format (0x3)
+
+        # Encrypt the block
+        ciphertext = encrypt(block, key)
+
+        # Output the ciphertext
+        print(f"Ciphertext: {hex(ciphertext)}")
+
+    except ValueError as e:
+        print(f"Error: {e}")
